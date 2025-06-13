@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sudoku</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <h1>Sudoku</h1>
+    <div style="margin-bottom:10px;">
+        <label for="difficulty">Difficulty:</label>
+        <select id="difficulty">
+            <option value="easy">Easy</option>
+            <option value="medium">Medium</option>
+            <option value="hard">Difficult</option>
+        </select>
+        <button id="new-puzzle-btn">New Puzzle</button>
+        <hr style="visibility: hidden;">
+        <label style="margin-left:0;font-size:14px;">
+            <input type="checkbox" id="highlight-wrong"> Highlight wrong numbers
+        </label>
+        <br>
+        <label style="margin-left:0;font-size:14px;">
+            <input type="checkbox" id="highlight-current-wrong"> Highlight currently wrong numbers
+        </label>
+    </div>
+    <div id="sudoku-board"></div>
+    <button id="check-btn">Check Solution</button>
+    <br>
+    <button id="solve-btn">Solve</button>
+    <button id="clear-btn">Clear</button>
+    <p id="message"></p>
+    <script src="script.js"></script>
+</body>
+</html>

@@ -1,0 +1,112 @@
+body {
+    font-family: Arial, sans-serif;
+    background: #f8f8f8;
+    text-align: center;
+}
+#sudoku-board {
+    display: grid;
+    grid-template-columns: repeat(9, 40px);
+    grid-template-rows: repeat(9, 40px);
+    gap: 0;
+    margin: 20px auto;
+    width: fit-content;
+}
+.sudoku-cell {
+    width: 40px;
+    height: 40px;
+    text-align: center;
+    font-size: 18px;
+    border: 1px solid #999;
+    background: #fff;
+    box-sizing: border-box;
+    padding: 0;
+    margin: 0;
+}
+/* Thicker 2px borders for 3x3 blocks */
+.sudoku-cell:nth-child(9n+1) { border-left: 2px solid #333; }
+.sudoku-cell:nth-child(-n+9) { border-top: 2px solid #333; }
+.sudoku-cell:nth-child(9n) { border-right: 2px solid #333; }
+.sudoku-cell:nth-child(n+73) { border-bottom: 2px solid #333; }
+/* Thicker borders for inner 3x3 blocks */
+.sudoku-cell:nth-child(3n+1) { border-left: 2px solid #333; }
+.sudoku-cell:nth-child(n+1):nth-child(-n+9),
+.sudoku-cell:nth-child(n+28):nth-child(-n+36),
+.sudoku-cell:nth-child(n+55):nth-child(-n+63) { border-top: 2px solid #333; }
+.sudoku-cell:focus {
+    outline: none;
+}
+.sudoku-cell.fixed {
+    background: #eee;
+    font-weight: bold;
+}
+.sudoku-cell.wrong {
+    background: #ffcccc !important;
+}
+.sudoku-cell.selected-number {
+    background: #ffe066 !important;
+}
+@keyframes blink {
+    0%, 100% { background-color: #ffe066; }
+    50% { background-color: #fff176; }
+}
+.sudoku-cell.blink {
+    animation: blink 0.3s linear 0s 3;
+}
+.controls-row {
+    margin-bottom: 10px;
+}
+#check-btn {
+    margin-top: 10px;
+    padding: 8px 16px;
+    font-size: 16px;
+}
+#message {
+    margin-top: 10px;
+    font-weight: bold;
+}
+#difficulty {
+    font-size: 16px;
+    margin-right: 8px;
+    height: 40px;
+    width: 120px;
+    box-sizing: border-box;
+}
+#new-puzzle-btn {
+    padding: 8px 16px;
+    height: 40px;
+    width: 120px;
+    box-sizing: border-box;
+}
+#solve-btn {
+    margin-top: 6px;
+    font-size: 12px;
+    padding: 2px 10px;
+    opacity: 0.5;
+    background: #eee;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: opacity 0.2s;
+}
+#solve-btn:hover {
+    opacity: 0.8;
+}
+#clear-btn {
+    margin-top: 6px;
+    font-size: 12px;
+    padding: 2px 10px;
+    opacity: 0.5;
+    background: #eee;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: opacity 0.2s;
+}
+#clear-btn:hover {
+    opacity: 0.8;
+}
+#highlight-wrong-label {
+    display: inline-block;
+    margin-bottom: 10px;
+    font-size: 14px;
+}
