@@ -46,8 +46,8 @@ body {
     background: #ffe066 !important;
 }
 @keyframes blink {
-    0%, 100% { background-color: #ffe066; }
-    50% { background-color: #fff176; }
+    0%, 100% { background-color: #b6ffb6; }
+    50% { background-color: #4cff4c; }
 }
 .sudoku-cell.blink {
     animation: blink 0.3s linear 0s 3;

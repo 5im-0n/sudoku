@@ -75,6 +75,61 @@ function countSolutions(board) {
   return count;
 }
 
+function getCluesForDifficulty(difficulty) {
+  if (difficulty === 'easy') return 36;
+  if (difficulty === 'medium') return 32;
+  return 28; // hard
+}
+
+function removeCells(board, clues) {
+  let attempts = 5;
+  let puzzle = deepCopy(board);
+  let cellsToRemove = 81 - clues;
+  while (cellsToRemove > 0 && attempts > 0) {
+    let row = Math.floor(Math.random()*9);
+    let col = Math.floor(Math.random()*9);
+    if (puzzle[row][col] !== 0) {
+      let backup = puzzle[row][col];
+      puzzle[row][col] = 0;
+      let copy = deepCopy(puzzle);
+      if (countSolutions(copy) !== 1) {
+        puzzle[row][col] = backup;
+        attempts--;
+      } else {
+        cellsToRemove--;
+      }
+    }
+  }
+  return puzzle;
+}
+
+function generateFullBoard() {
+  const board = Array.from({length:9},()=>Array(9).fill(0));
+  function fill(row, col) {
+    if (row === 9) return true;
+    const nextRow = col === 8 ? row + 1 : row;
+    const nextCol = col === 8 ? 0 : col + 1;
+    let nums = [1,2,3,4,5,6,7,8,9];
+    shuffle(nums);
+    for (let num of nums) {
+      if (isSafe(board, row, col, num)) {
+        board[row][col] = num;
+        if (fill(nextRow, nextCol)) return true;
+        board[row][col] = 0;
+      }
+    }
+    return false;
+  }
+  fill(0,0);
+  return board;
+}
+
+function generatePuzzle(difficulty) {
+  let full = generateFullBoard();
+  let clues = getCluesForDifficulty(difficulty);
+  return removeCells(full, clues);
+}
+
 function createBoard() {
   const board = document.getElementById('sudoku-board');
   board.innerHTML = '';
@@ -114,6 +169,39 @@ function getBoardState() {
     state[row][col] = cell.value ? +cell.value : 0;
   });
   return state;
+}
+
+function saveBoardState() {
+  const cells = document.querySelectorAll('.sudoku-cell');
+  const state = Array.from({length: 9}, () => Array(9).fill(0));
+  cells.forEach(cell => {
+    const row = +cell.dataset.row;
+    const col = +cell.dataset.col;
+    state[row][col] = cell.value ? +cell.value : 0;
+  });
+  localStorage.setItem('sudoku-board-state', JSON.stringify(state));
+  localStorage.setItem('sudoku-puzzle', JSON.stringify(puzzle));
+}
+
+function loadBoardState() {
+  const savedPuzzle = localStorage.getItem('sudoku-puzzle');
+  const savedState = localStorage.getItem('sudoku-board-state');
+  if (savedPuzzle && savedState) {
+    puzzle = JSON.parse(savedPuzzle);
+    const state = JSON.parse(savedState);
+    createBoard();
+    // Fill user values
+    const cells = document.querySelectorAll('.sudoku-cell');
+    cells.forEach(cell => {
+      const row = +cell.dataset.row;
+      const col = +cell.dataset.col;
+      if (!cell.classList.contains('fixed')) {
+        cell.value = state[row][col] ? state[row][col] : '';
+      }
+    });
+    return true;
+  }
+  return false;
 }
 
 function isValid(board) {
@@ -197,19 +285,13 @@ function clearWrongHighlights() {
 
 function highlightSameNumbers(num) {
   const cells = document.querySelectorAll('.sudoku-cell');
-  let count = 0;
   cells.forEach(cell => {
     if (cell.value === num && num !== '') {
       cell.classList.add('selected-number');
-      count++;
     } else {
       cell.classList.remove('selected-number');
     }
   });
-  // If all 9 numbers are present, blink them 3 times
-  if (count === 9) {
-    blinkCells(num);
-  }
 }
 
 function blinkCells(num) {
@@ -281,6 +363,13 @@ function highlightCurrentWrongCells() {
   });
 }
 
+function setPuzzle(newPuzzle) {
+  puzzle = newPuzzle;
+  createBoard();
+  document.getElementById('message').textContent = '';
+  saveBoardState();
+}
+
 let lastSelectedCell = null;
 document.getElementById('sudoku-board').addEventListener('click', function(e) {
   if (e.target.classList.contains('fixed')) {
@@ -315,7 +404,8 @@ document.getElementById('highlight-current-wrong').addEventListener('change', fu
   }
 });
 
-document.getElementById('sudoku-board').addEventListener('input', function() {
+const sudokuBoard = document.getElementById('sudoku-board');
+sudokuBoard.addEventListener('input', function(e) {
   if (document.getElementById('highlight-current-wrong').checked) {
     highlightCurrentWrongCells();
   } else if (document.getElementById('highlight-wrong').checked) {
@@ -323,6 +413,19 @@ document.getElementById('sudoku-board').addEventListener('input', function() {
   } else {
     clearWrongHighlights();
   }
+  // Blink if all 9 of the entered number are present
+  if (e && e.target && /^[1-9]$/.test(e.target.value)) {
+    const num = e.target.value;
+    const cells = document.querySelectorAll('.sudoku-cell');
+    let count = 0;
+    cells.forEach(cell => {
+      if (cell.value === num) count++;
+    });
+    if (count === 9) {
+      blinkCells(num);
+    }
+  }
+  saveBoardState();
 });
 
 document.getElementById('check-btn').addEventListener('click', () => {
@@ -365,4 +468,14 @@ document.getElementById('clear-btn').addEventListener('click', () => {
   document.getElementById('message').textContent = '';
 });
 
-window.onload = createBoard;
+document.getElementById('new-puzzle-btn').addEventListener('click', () => {
+  const difficulty = document.getElementById('difficulty').value;
+  setPuzzle(generatePuzzle(difficulty));
+  saveBoardState();
+});
+
+window.onload = function() {
+  if (!loadBoardState()) {
+    createBoard();
+  }
+};
