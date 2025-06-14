@@ -161,7 +161,7 @@ function createBoard() {
       }
       const pencilDiv = document.createElement('div');
       pencilDiv.className = 'pencil-marks';
-      pencilDiv.textContent = pencilMarks[row][col].join(' ');
+      pencilDiv.innerHTML = pencilMarks[row][col].map(n => `<span>${n}</span>`).join(' ');
       container.appendChild(input);
       container.appendChild(pencilDiv);
       board.appendChild(container);
@@ -206,7 +206,7 @@ function updatePencilMarks(row, col) {
       pencilDiv.className = 'pencil-marks';
       container.appendChild(pencilDiv);
     }
-    pencilDiv.textContent = pencilMarks[row][col].join(' ');
+    pencilDiv.innerHTML = pencilMarks[row][col].map(n => `<span>${n}</span>`).join(' ');
   }
 }
 
@@ -368,11 +368,35 @@ function highlightSameNumbers(num) {
       cell.classList.remove('selected-number');
     }
   });
+  // Highlight only the matching number in pencil marks
+  const containers = document.querySelectorAll('.sudoku-cell-container');
+  containers.forEach(container => {
+    const pencilDiv = container.querySelector('.pencil-marks');
+    if (pencilDiv) {
+      pencilDiv.querySelectorAll('span').forEach(span => {
+        if (num && span.textContent === num) {
+          span.classList.add('highlighted');
+        } else {
+          span.classList.remove('highlighted');
+        }
+      });
+    }
+  });
 }
 
-function blinkCells(num) {
+function blinkCells(num, restoreSelected = false) {
   const cells = Array.from(document.querySelectorAll('.sudoku-cell')).filter(cell => cell.value === num);
   let blinks = 0;
+  // Remove selected-number class if needed
+  let removed = [];
+  if (restoreSelected) {
+    cells.forEach(cell => {
+      if (cell.classList.contains('selected-number')) {
+        cell.classList.remove('selected-number');
+        removed.push(cell);
+      }
+    });
+  }
   function doBlink() {
     cells.forEach(cell => cell.classList.add('blink'));
     setTimeout(() => {
@@ -380,6 +404,8 @@ function blinkCells(num) {
       blinks++;
       if (blinks < 3) {
         setTimeout(doBlink, 100);
+      } else if (restoreSelected) {
+        removed.forEach(cell => cell.classList.add('selected-number'));
       }
     }, 150);
   }
@@ -457,6 +483,15 @@ document.getElementById('sudoku-board').addEventListener('click', function(e) {
     } else {
       highlightSameNumbers(num);
       lastSelectedCell = e.target;
+      // Flash if all 9 of this number are present
+      const cells = document.querySelectorAll('.sudoku-cell');
+      let count = 0;
+      cells.forEach(cell => {
+        if (cell.value === num) count++;
+      });
+      if (count === 9) {
+        blinkCells(num, true);
+      }
     }
   } else {
     highlightSameNumbers('');
@@ -502,24 +537,14 @@ sudokuBoard.addEventListener('input', function(e) {
     }
   }
   saveBoardState();
+  // Auto-check for completion and correct solution, show message
+  const board = getBoardState();
+  if (isComplete(board) && isValid(board)) {
+    checkSolutionAndAnimate();
+  }
 });
 
-document.getElementById('check-btn').addEventListener('click', () => {
-  const board = getBoardState();
-  const message = document.getElementById('message');
-  if (!isComplete(board)) {
-    message.textContent = 'The puzzle is not complete.';
-    message.style.color = 'orange';
-    return;
-  }
-  if (isValid(board)) {
-    message.textContent = 'Congratulations! You solved the puzzle!';
-    message.style.color = 'green';
-  } else {
-    message.textContent = 'There are mistakes in your solution.';
-    message.style.color = 'red';
-  }
-});
+document.getElementById('check-btn').addEventListener('click', checkSolutionAndAnimate);
 
 document.getElementById('solve-btn').addEventListener('click', () => {
   // Deep copy the current puzzle
@@ -581,3 +606,28 @@ window.onload = function() {
 };
 
 window.addEventListener('resize', resizeBoard);
+
+function checkSolutionAndAnimate() {
+  const board = getBoardState();
+  const message = document.getElementById('message');
+  if (!isComplete(board)) {
+    message.textContent = 'The puzzle is not complete.';
+    message.style.color = 'orange';
+    return false;
+  }
+  if (isValid(board)) {
+    message.textContent = 'Congratulations! You solved the puzzle!';
+    message.style.color = 'green';
+    // Rainbow effect
+    const cells = document.querySelectorAll('.sudoku-cell');
+    cells.forEach(cell => cell.classList.add('rainbow'));
+    setTimeout(() => {
+      cells.forEach(cell => cell.classList.remove('rainbow'));
+    }, 2500);
+    return true;
+  } else {
+    message.textContent = 'There are mistakes in your solution.';
+    message.style.color = 'red';
+    return false;
+  }
+}
