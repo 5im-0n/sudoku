@@ -279,7 +279,7 @@ function createBoard() {
       input.dataset.row = row;
       input.dataset.col = col;
       if (puzzle[row][col] !== 0) {
-        input.type = 'text';
+        input.type = 'button';
         input.value = puzzle[row][col];
         input.readOnly = true;
         input.classList.add('fixed');
