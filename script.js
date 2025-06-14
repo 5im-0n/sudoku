@@ -761,11 +761,9 @@ document.getElementById('solve-btn').addEventListener('click', () => {
   let board = puzzle.map(row => row.slice());
   if (solveSudoku(board)) {
     fillSolution(board);
-    document.getElementById('message').textContent = 'Puzzle solved!';
-    document.getElementById('message').style.color = 'blue';
+    showMessage('Puzzle solved!', 'blue');
   } else {
-    document.getElementById('message').textContent = 'No solution found.';
-    document.getElementById('message').style.color = 'red';
+    showMessage('No solution found.', 'red');
   }
 });
 
@@ -780,7 +778,7 @@ document.getElementById('clear-btn').addEventListener('click', () => {
       updatePencilMarks(row, col);
     }
   });
-  document.getElementById('message').textContent = '';
+  showMessage('');
   saveBoardState();
 });
 
@@ -847,10 +845,7 @@ function loadFromUrl() {
       });
       return true;
     } catch (e) {
-      const msg = document.getElementById('message');
-      msg.textContent = 'Failed to load shared puzzle.';
-      msg.style.color = 'red';
-      setTimeout(() => { msg.textContent = ''; }, 8000);
+      showMessage('Failed to load shared puzzle.', 'red');
     }
   }
   return false;
@@ -884,13 +879,11 @@ function checkSolutionAndAnimate() {
   const board = getBoardState();
   const message = document.getElementById('message');
   if (!isComplete(board)) {
-    message.textContent = 'The puzzle is not complete.';
-    message.style.color = 'orange';
+    showMessage('The puzzle is not complete.', 'orange');
     return false;
   }
   if (isValid(board)) {
-    message.textContent = 'Congratulations! You solved the puzzle!';
-    message.style.color = 'green';
+    showMessage('Congratulations! You solved the puzzle!', 'green');
     // Rainbow effect
     const cells = document.querySelectorAll('.sudoku-cell');
     cells.forEach(cell => cell.classList.add('rainbow'));
@@ -899,8 +892,29 @@ function checkSolutionAndAnimate() {
     }, 2500);
     return true;
   } else {
-    message.textContent = 'There are mistakes in your solution.';
-    message.style.color = 'red';
+    showMessage('There are mistakes in your solution.', 'red');
     return false;
+  }
+}
+
+let messageTimeout = null;
+function showMessage(text, color = '', duration = 8000) {
+  const message = document.getElementById('message');
+  message.textContent = text;
+  if (color) {
+    message.style.color = color;
+  } else {
+    message.style.color = '';
+  }
+  // Clear existing timeout
+  if (messageTimeout) {
+    clearTimeout(messageTimeout);
+    messageTimeout = null;
+  }
+  // Hide message after 8 seconds
+  if (duration > 0) {
+    messageTimeout = setTimeout(() => {
+      message.textContent = '';
+    }, duration);
   }
 }
