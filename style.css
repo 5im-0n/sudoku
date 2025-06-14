@@ -110,3 +110,43 @@ body {
     margin-bottom: 10px;
     font-size: 14px;
 }
+@media (max-width: 600px) {
+  #sudoku-board {
+    grid-template-columns: repeat(9, 1fr);
+    grid-template-rows: repeat(9, 1fr);
+    width: 98vw;
+    max-width: 98vw;
+    height: 98vw;
+    max-height: 98vw;
+    min-width: 270px;
+    min-height: 270px;
+  }
+  .sudoku-cell {
+    width: 100%;
+    height: 100%;
+    font-size: 5vw;
+    min-width: 30px;
+    min-height: 30px;
+  }
+  #check-btn, #solve-btn, #clear-btn, #new-puzzle-btn {
+    width: 90vw;
+    min-width: 120px;
+    font-size: 5vw;
+    padding: 10px 0;
+    margin: 6px 0;
+  }
+  #difficulty {
+    width: 90vw;
+    min-width: 120px;
+    font-size: 5vw;
+    height: 40px;
+    margin-bottom: 8px;
+  }
+  h1 {
+    font-size: 7vw;
+  }
+  body {
+    padding: 0;
+    margin: 0;
+  }
+}

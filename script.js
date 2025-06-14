@@ -136,16 +136,19 @@ function createBoard() {
   for (let row = 0; row < 9; row++) {
     for (let col = 0; col < 9; col++) {
       const input = document.createElement('input');
-      input.type = 'text';
       input.maxLength = 1;
       input.className = 'sudoku-cell';
       input.dataset.row = row;
       input.dataset.col = col;
       if (puzzle[row][col] !== 0) {
+        input.type = 'text';
         input.value = puzzle[row][col];
         input.readOnly = true;
         input.classList.add('fixed');
       } else {
+        input.type = 'tel';
+        input.inputMode = 'numeric';
+        input.pattern = '[1-9]';
         input.addEventListener('input', onInput);
       }
       board.appendChild(input);
