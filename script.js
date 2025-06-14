@@ -133,6 +133,137 @@ function generatePuzzle(difficulty) {
 let pencilMode = false;
 let pencilMarks = Array.from({length:9},()=>Array.from({length:9},()=>[]));
 
+let selectedNumber = null;
+
+let undoStack = [];
+let redoStack = [];
+
+function renderNumberRow() {
+  const numberRow = document.getElementById('number-row');
+  numberRow.innerHTML = '';
+  for (let i = 1; i <= 9; i++) {
+    const btn = document.createElement('button');
+    btn.textContent = i;
+    btn.className = 'number-btn';
+    if (selectedNumber == i) btn.classList.add('selected');
+    btn.addEventListener('click', function() {
+      if (selectedNumber == i) {
+        selectedNumber = null;
+      } else {
+        selectedNumber = i;
+      }
+      renderNumberRow();
+    });
+    numberRow.appendChild(btn);
+  }
+  // Add an erase button
+  const eraseBtn = document.createElement('button');
+  eraseBtn.textContent = '␡';
+  eraseBtn.title = 'Erase';
+  eraseBtn.className = 'number-btn erase-btn';
+  if (selectedNumber === 0) eraseBtn.classList.add('selected');
+  eraseBtn.addEventListener('click', function() {
+    if (selectedNumber === 0) {
+      selectedNumber = null;
+    } else {
+      selectedNumber = 0;
+    }
+    renderNumberRow();
+  });
+  numberRow.appendChild(eraseBtn);
+}
+
+function renderUndoRedoRow() {
+  const row = document.getElementById('undo-redo-row');
+  row.innerHTML = '';
+  const undoBtn = document.createElement('button');
+  undoBtn.textContent = 'Undo';
+  undoBtn.className = 'undo-redo-btn';
+  undoBtn.disabled = undoStack.length === 0;
+  undoBtn.addEventListener('click', undoAction);
+  row.appendChild(undoBtn);
+  const redoBtn = document.createElement('button');
+  redoBtn.textContent = 'Redo';
+  redoBtn.className = 'undo-redo-btn';
+  redoBtn.disabled = redoStack.length === 0;
+  redoBtn.addEventListener('click', redoAction);
+  row.appendChild(redoBtn);
+}
+
+function pushUndoState() {
+  const state = {
+    board: getBoardState(),
+    pencil: JSON.parse(JSON.stringify(pencilMarks))
+  };
+  undoStack.push(state);
+  if (undoStack.length > 100) undoStack.shift();
+  redoStack = [];
+  renderUndoRedoRow();
+}
+
+function undoAction() {
+  if (undoStack.length === 0) return;
+  const state = undoStack.pop();
+  const current = {
+    board: getBoardState(),
+    pencil: JSON.parse(JSON.stringify(pencilMarks))
+  };
+  redoStack.push(current);
+  restoreState(state);
+  renderUndoRedoRow();
+}
+
+function redoAction() {
+  if (redoStack.length === 0) return;
+  const state = redoStack.pop();
+  const current = {
+    board: getBoardState(),
+    pencil: JSON.parse(JSON.stringify(pencilMarks))
+  };
+  undoStack.push(current);
+  restoreState(state);
+  renderUndoRedoRow();
+}
+
+function restoreState(state) {
+  // Only update editable cells
+  const cells = document.querySelectorAll('.sudoku-cell');
+  cells.forEach(cell => {
+    const row = +cell.dataset.row;
+    const col = +cell.dataset.col;
+    if (!cell.classList.contains('fixed')) {
+      cell.value = state.board[row][col] ? state.board[row][col] : '';
+    }
+  });
+  pencilMarks = JSON.parse(JSON.stringify(state.pencil));
+  for (let row = 0; row < 9; row++) {
+    for (let col = 0; col < 9; col++) {
+      updatePencilMarks(row, col);
+    }
+  }
+  saveBoardState();
+  // Trigger input event for highlights, etc.
+  document.getElementById('sudoku-board').dispatchEvent(new Event('input', {bubbles:true}));
+}
+
+// Patch all user actions to pushUndoState
+function patchUserActionUndo() {
+  // For cell input via number row
+  document.getElementById('sudoku-board').addEventListener('click', function(e) {
+    if (e.target.classList.contains('sudoku-cell') && !e.target.classList.contains('fixed')) {
+      pushUndoState();
+    }
+  }, true);
+  // For clear, solve, new puzzle
+  document.getElementById('clear-btn').addEventListener('click', pushUndoState, true);
+  document.getElementById('solve-btn').addEventListener('click', pushUndoState, true);
+  document.getElementById('new-puzzle-btn').addEventListener('click', function() {
+    undoStack = [];
+    redoStack = [];
+    renderUndoRedoRow();
+  }, true);
+}
+
 function createBoard() {
   const board = document.getElementById('sudoku-board');
   board.innerHTML = '';
@@ -153,11 +284,78 @@ function createBoard() {
         input.readOnly = true;
         input.classList.add('fixed');
       } else {
-        input.type = 'tel';
-        input.inputMode = 'numeric';
-        input.pattern = '[1-9]';
-        input.addEventListener('input', onInput);
-        input.addEventListener('keydown', onCellKeyDown);
+        input.type = 'button';
+        input.value = '';
+        input.tabIndex = 0;
+        input.addEventListener('click', function(e) {
+          if (selectedNumber === null) return;
+          if (selectedNumber === 0) {
+            input.value = '';
+            pencilMarks[row][col] = [];
+            updatePencilMarks(row, col);
+            saveBoardState();
+            return;
+          }
+          if (pencilMode) {
+            let idx = pencilMarks[row][col].indexOf(String(selectedNumber));
+            if (idx === -1) {
+              pencilMarks[row][col].push(String(selectedNumber));
+              pencilMarks[row][col].sort();
+            } else {
+              pencilMarks[row][col].splice(idx, 1);
+            }
+            updatePencilMarks(row, col);
+            saveBoardState();
+          } else {
+            input.value = selectedNumber;
+            pencilMarks[row][col] = [];
+            updatePencilMarks(row, col);
+            saveBoardState();
+            input.dispatchEvent(new Event('input', {bubbles:true}));
+          }
+        });
+        // Keyboard support
+        input.addEventListener('keydown', function(e) {
+          if (e.key >= '1' && e.key <= '9') {
+            e.preventDefault();
+            if (pencilMode) {
+              let idx = pencilMarks[row][col].indexOf(e.key);
+              if (idx === -1) {
+                pencilMarks[row][col].push(e.key);
+                pencilMarks[row][col].sort();
+              } else {
+                pencilMarks[row][col].splice(idx, 1);
+              }
+              updatePencilMarks(row, col);
+              saveBoardState();
+            } else {
+              input.value = e.key;
+              pencilMarks[row][col] = [];
+              updatePencilMarks(row, col);
+              saveBoardState();
+              input.dispatchEvent(new Event('input', {bubbles:true}));
+            }
+          } else if (e.key === 'Backspace' || e.key === 'Delete') {
+            e.preventDefault();
+            input.value = '';
+            pencilMarks[row][col] = [];
+            updatePencilMarks(row, col);
+            saveBoardState();
+            input.dispatchEvent(new Event('input', {bubbles:true}));
+          } else if (e.key === 'ArrowLeft') {
+            e.preventDefault();
+            focusCell(row, col - 1);
+          } else if (e.key === 'ArrowRight') {
+            e.preventDefault();
+            focusCell(row, col + 1);
+          } else if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            focusCell(row - 1, col);
+          } else if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            focusCell(row + 1, col);
+          }
+        });
       }
       const pencilDiv = document.createElement('div');
       pencilDiv.className = 'pencil-marks';
@@ -166,6 +364,18 @@ function createBoard() {
       container.appendChild(pencilDiv);
       board.appendChild(container);
     }
+  }
+}
+
+function focusCell(row, col) {
+  if (row < 0 || row > 8 || col < 0 || col > 8) return;
+  const idx = row * 9 + col;
+  const board = document.getElementById('sudoku-board');
+  const container = board.children[idx];
+  if (!container) return;
+  const input = container.querySelector('.sudoku-cell');
+  if (input && !input.classList.contains('fixed')) {
+    input.focus();
   }
 }
 
@@ -658,10 +868,13 @@ function resizeBoard() {
 }
 
 window.onload = function() {
+  renderNumberRow();
+  renderUndoRedoRow();
   if (!loadFromUrl() && !loadBoardState()) {
     pencilMarks = Array.from({length:9},()=>Array.from({length:9},()=>[]));
     createBoard();
   }
+  patchUserActionUndo();
   resizeBoard();
 };
 
