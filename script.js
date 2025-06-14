@@ -586,6 +586,58 @@ document.getElementById('pencil-mode-btn').addEventListener('click', function() 
   this.textContent = 'Pencil Mark Mode: ' + (pencilMode ? 'On' : 'Off');
 });
 
+document.getElementById('share-btn').addEventListener('click', function() {
+  // Encode puzzle and current state
+  const puzzleStr = btoa(JSON.stringify(puzzle));
+  const state = getBoardState();
+  const stateStr = btoa(JSON.stringify(state));
+  const url = `${location.origin}${location.pathname}?puzzle=${encodeURIComponent(puzzleStr)}&state=${encodeURIComponent(stateStr)}`;
+  // Copy to clipboard
+  const shareMsg = document.getElementById('share-message');
+  function showShareMsg(text, link) {
+    if (link) {
+      shareMsg.innerHTML = `${text} <a href="${link}" target="_blank" style="word-break:break-all;">${link}</a>`;
+    } else {
+      shareMsg.textContent = text;
+    }
+    shareMsg.style.display = 'inline';
+    setTimeout(() => { shareMsg.style.display = 'none'; }, 8000);
+  }
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(url).then(() => {
+      showShareMsg('Link copied! Share it with a friend.');
+    }, () => {
+      showShareMsg('Share this link:', url);
+    });
+  } else {
+    showShareMsg('Share this link:', url);
+  }
+});
+
+function loadFromUrl() {
+  const params = new URLSearchParams(window.location.search);
+  const puzzleStr = params.get('puzzle');
+  const stateStr = params.get('state');
+  if (puzzleStr && stateStr) {
+    try {
+      puzzle = JSON.parse(atob(puzzleStr));
+      const state = JSON.parse(atob(stateStr));
+      createBoard();
+      // Fill user values
+      const cells = document.querySelectorAll('.sudoku-cell');
+      cells.forEach(cell => {
+        const row = +cell.dataset.row;
+        const col = +cell.dataset.col;
+        if (!cell.classList.contains('fixed')) {
+          cell.value = state[row][col] ? state[row][col] : '';
+        }
+      });
+      return true;
+    } catch (e) {}
+  }
+  return false;
+}
+
 function resizeBoard() {
   const board = document.getElementById('sudoku-board');
   if (!board) return;
@@ -598,7 +650,7 @@ function resizeBoard() {
 }
 
 window.onload = function() {
-  if (!loadBoardState()) {
+  if (!loadFromUrl() && !loadBoardState()) {
     pencilMarks = Array.from({length:9},()=>Array.from({length:9},()=>[]));
     createBoard();
   }
