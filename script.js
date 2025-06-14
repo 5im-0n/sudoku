@@ -130,11 +130,18 @@ function generatePuzzle(difficulty) {
   return removeCells(full, clues);
 }
 
+let pencilMode = false;
+let pencilMarks = Array.from({length:9},()=>Array.from({length:9},()=>[]));
+
 function createBoard() {
   const board = document.getElementById('sudoku-board');
   board.innerHTML = '';
   for (let row = 0; row < 9; row++) {
     for (let col = 0; col < 9; col++) {
+      const container = document.createElement('div');
+      container.className = 'sudoku-cell-container';
+      container.style.gridColumn = (col + 1);
+      container.style.gridRow = (row + 1);
       const input = document.createElement('input');
       input.maxLength = 1;
       input.className = 'sudoku-cell';
@@ -150,16 +157,73 @@ function createBoard() {
         input.inputMode = 'numeric';
         input.pattern = '[1-9]';
         input.addEventListener('input', onInput);
+        input.addEventListener('keydown', onCellKeyDown);
       }
-      board.appendChild(input);
+      const pencilDiv = document.createElement('div');
+      pencilDiv.className = 'pencil-marks';
+      pencilDiv.textContent = pencilMarks[row][col].join(' ');
+      container.appendChild(input);
+      container.appendChild(pencilDiv);
+      board.appendChild(container);
     }
   }
 }
 
+function onCellKeyDown(e) {
+  if (!pencilMode) return;
+  if (e.key >= '1' && e.key <= '9') {
+    e.preventDefault();
+    const row = +e.target.dataset.row;
+    const col = +e.target.dataset.col;
+    const num = e.key;
+    let idx = pencilMarks[row][col].indexOf(num);
+    if (idx === -1) {
+      pencilMarks[row][col].push(num);
+      pencilMarks[row][col].sort();
+    } else {
+      pencilMarks[row][col].splice(idx, 1);
+    }
+    updatePencilMarks(row, col);
+    saveBoardState();
+  } else if (e.key === 'Backspace' || e.key === 'Delete') {
+    e.preventDefault();
+    const row = +e.target.dataset.row;
+    const col = +e.target.dataset.col;
+    pencilMarks[row][col] = [];
+    updatePencilMarks(row, col);
+    saveBoardState();
+  }
+}
+
+function updatePencilMarks(row, col) {
+  const board = document.getElementById('sudoku-board');
+  const idx = row * 9 + col;
+  const container = board.children[idx];
+  if (container) {
+    let pencilDiv = container.querySelector('.pencil-marks');
+    if (!pencilDiv) {
+      pencilDiv = document.createElement('div');
+      pencilDiv.className = 'pencil-marks';
+      container.appendChild(pencilDiv);
+    }
+    pencilDiv.textContent = pencilMarks[row][col].join(' ');
+  }
+}
+
 function onInput(e) {
+  if (pencilMode) {
+    e.target.value = '';
+    return;
+  }
   const val = e.target.value;
   if (!/^[1-9]$/.test(val)) {
     e.target.value = '';
+  } else {
+    // Clear pencil marks for this cell
+    const row = +e.target.dataset.row;
+    const col = +e.target.dataset.col;
+    pencilMarks[row][col] = [];
+    updatePencilMarks(row, col);
   }
 }
 
@@ -184,14 +248,17 @@ function saveBoardState() {
   });
   localStorage.setItem('sudoku-board-state', JSON.stringify(state));
   localStorage.setItem('sudoku-puzzle', JSON.stringify(puzzle));
+  localStorage.setItem('sudoku-pencil-marks', JSON.stringify(pencilMarks));
 }
 
 function loadBoardState() {
   const savedPuzzle = localStorage.getItem('sudoku-puzzle');
   const savedState = localStorage.getItem('sudoku-board-state');
+  const savedPencil = localStorage.getItem('sudoku-pencil-marks');
   if (savedPuzzle && savedState) {
     puzzle = JSON.parse(savedPuzzle);
     const state = JSON.parse(savedState);
+    if (savedPencil) pencilMarks = JSON.parse(savedPencil);
     createBoard();
     // Fill user values
     const cells = document.querySelectorAll('.sudoku-cell');
@@ -202,6 +269,12 @@ function loadBoardState() {
         cell.value = state[row][col] ? state[row][col] : '';
       }
     });
+    // Update pencil marks
+    for (let row = 0; row < 9; row++) {
+      for (let col = 0; col < 9; col++) {
+        updatePencilMarks(row, col);
+      }
+    }
     return true;
   }
   return false;
@@ -466,19 +539,45 @@ document.getElementById('clear-btn').addEventListener('click', () => {
   cells.forEach(cell => {
     if (!cell.classList.contains('fixed')) {
       cell.value = '';
+      const row = +cell.dataset.row;
+      const col = +cell.dataset.col;
+      pencilMarks[row][col] = [];
+      updatePencilMarks(row, col);
     }
   });
   document.getElementById('message').textContent = '';
+  saveBoardState();
 });
 
 document.getElementById('new-puzzle-btn').addEventListener('click', () => {
   const difficulty = document.getElementById('difficulty').value;
   setPuzzle(generatePuzzle(difficulty));
+  pencilMarks = Array.from({length:9},()=>Array.from({length:9},()=>[]));
   saveBoardState();
 });
 
+document.getElementById('pencil-mode-btn').addEventListener('click', function() {
+  pencilMode = !pencilMode;
+  this.textContent = 'Pencil Mark Mode: ' + (pencilMode ? 'On' : 'Off');
+});
+
+function resizeBoard() {
+  const board = document.getElementById('sudoku-board');
+  if (!board) return;
+  const baseSize = 360;
+  // Use 98vw for width, subtract a small margin (8px)
+  const w = window.innerWidth * 0.90;
+  const h = window.innerHeight - 180;
+  const scale = Math.min(w, h) / baseSize;
+  board.style.zoom = scale < 1 ? scale : 1;
+}
+
 window.onload = function() {
   if (!loadBoardState()) {
+    pencilMarks = Array.from({length:9},()=>Array.from({length:9},()=>[]));
     createBoard();
   }
+  resizeBoard();
 };
+
+window.addEventListener('resize', resizeBoard);

@@ -11,22 +11,86 @@ body {
     margin: 20px auto;
     width: fit-content;
 }
+#sudoku-board > .sudoku-cell-container {
+    width: 40px;
+    height: 40px;
+}
+.sudoku-cell-container {
+    position: relative;
+    width: 40px;
+    height: 40px;
+    display: inline-block;
+}
+/* Thicker 2px borders for 3x3 blocks */
+.sudoku-cell-container:nth-child(9n+1) { border-left: 2px solid #333; }
+.sudoku-cell-container:nth-child(-n+9) { border-top: 2px solid #333; }
+.sudoku-cell-container:nth-child(9n) {
+    border-right: 3px solid #333;
+    /* Add missing 1px border for outer edge */
+    box-shadow: 1px 0 0 0 #999;
+}
+.sudoku-cell-container:nth-child(n+73) {
+    border-bottom: 3px solid #333;
+    /* Add missing 1px border for outer edge */
+    box-shadow: 0 1px 0 0 #999;
+}
+.sudoku-cell-container:nth-child(81) {
+    /* Bottom-right cell: add both borders */
+    box-shadow: 1px 0 0 0 #999, 0 1px 0 0 #999;
+}
+/* Thicker borders for inner 3x3 blocks */
+.sudoku-cell-container:nth-child(3n+1) { border-left: 2px solid #333; }
+.sudoku-cell-container:nth-child(n+1):nth-child(-n+9),
+.sudoku-cell-container:nth-child(n+28):nth-child(-n+36),
+.sudoku-cell-container:nth-child(n+55):nth-child(-n+63) { border-top: 2px solid #333; }
 .sudoku-cell {
     width: 40px;
     height: 40px;
     text-align: center;
     font-size: 18px;
-    border: 1px solid #999;
+    border: none;
     background: #fff;
     box-sizing: border-box;
     padding: 0;
     margin: 0;
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: transparent;
+    z-index: 1;
+}
+.sudoku-cell .pencil-marks, .sudoku-cell-container .pencil-marks {
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    left: 2px;
+    font-size: 10px;
+    color: #888;
+    text-align: right;
+    pointer-events: none;
+    line-height: 1.1;
+    white-space: pre-wrap;
+    z-index: 2;
 }
 /* Thicker 2px borders for 3x3 blocks */
 .sudoku-cell:nth-child(9n+1) { border-left: 2px solid #333; }
 .sudoku-cell:nth-child(-n+9) { border-top: 2px solid #333; }
-.sudoku-cell:nth-child(9n) { border-right: 2px solid #333; }
-.sudoku-cell:nth-child(n+73) { border-bottom: 2px solid #333; }
+.sudoku-cell:nth-child(9n) {
+    border-right: 2px solid #333;
+    /* Add missing 1px border for outer edge */
+    box-shadow: 1px 0 0 0 #999;
+}
+.sudoku-cell:nth-child(n+73) {
+    border-bottom: 2px solid #333;
+    /* Add missing 1px border for outer edge */
+    box-shadow: 0 1px 0 0 #999;
+}
+.sudoku-cell:nth-child(81) {
+    /* Bottom-right cell: add both borders */
+    box-shadow: 1px 0 0 0 #999, 0 1px 0 0 #999;
+}
 /* Thicker borders for inner 3x3 blocks */
 .sudoku-cell:nth-child(3n+1) { border-left: 2px solid #333; }
 .sudoku-cell:nth-child(n+1):nth-child(-n+9),
@@ -109,44 +173,4 @@ body {
     display: inline-block;
     margin-bottom: 10px;
     font-size: 14px;
-}
-@media (max-width: 600px) {
-  #sudoku-board {
-    grid-template-columns: repeat(9, 1fr);
-    grid-template-rows: repeat(9, 1fr);
-    width: 98vw;
-    max-width: 98vw;
-    height: 98vw;
-    max-height: 98vw;
-    min-width: 270px;
-    min-height: 270px;
-  }
-  .sudoku-cell {
-    width: 100%;
-    height: 100%;
-    font-size: 5vw;
-    min-width: 30px;
-    min-height: 30px;
-  }
-  #check-btn, #solve-btn, #clear-btn, #new-puzzle-btn {
-    width: 90vw;
-    min-width: 120px;
-    font-size: 5vw;
-    padding: 10px 0;
-    margin: 6px 0;
-  }
-  #difficulty {
-    width: 90vw;
-    min-width: 120px;
-    font-size: 5vw;
-    height: 40px;
-    margin-bottom: 8px;
-  }
-  h1 {
-    font-size: 7vw;
-  }
-  body {
-    padding: 0;
-    margin: 0;
-  }
 }
