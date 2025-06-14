@@ -587,11 +587,11 @@ document.getElementById('pencil-mode-btn').addEventListener('click', function() 
 });
 
 document.getElementById('share-btn').addEventListener('click', function() {
-  // Encode puzzle and current state
-  const puzzleStr = btoa(JSON.stringify(puzzle));
+  // Encode puzzle and current state using LZString
+  const puzzleStr = LZString.compressToEncodedURIComponent(JSON.stringify(puzzle));
   const state = getBoardState();
-  const stateStr = btoa(JSON.stringify(state));
-  const url = `${location.origin}${location.pathname}?puzzle=${encodeURIComponent(puzzleStr)}&state=${encodeURIComponent(stateStr)}`;
+  const stateStr = LZString.compressToEncodedURIComponent(JSON.stringify(state));
+  const url = `${location.origin}${location.pathname}?puzzle=${puzzleStr}&state=${stateStr}`;
   // Copy to clipboard
   const shareMsg = document.getElementById('share-message');
   function showShareMsg(text, link) {
@@ -620,8 +620,11 @@ function loadFromUrl() {
   const stateStr = params.get('state');
   if (puzzleStr && stateStr) {
     try {
-      puzzle = JSON.parse(atob(puzzleStr));
-      const state = JSON.parse(atob(stateStr));
+      const puzzleDecompressed = LZString.decompressFromEncodedURIComponent(puzzleStr);
+      const stateDecompressed = LZString.decompressFromEncodedURIComponent(stateStr);
+      if (!puzzleDecompressed || !stateDecompressed) throw new Error('Invalid puzzle data');
+      puzzle = JSON.parse(puzzleDecompressed);
+      const state = JSON.parse(stateDecompressed);
       createBoard();
       // Fill user values
       const cells = document.querySelectorAll('.sudoku-cell');
@@ -633,7 +636,12 @@ function loadFromUrl() {
         }
       });
       return true;
-    } catch (e) {}
+    } catch (e) {
+      const msg = document.getElementById('message');
+      msg.textContent = 'Failed to load shared puzzle.';
+      msg.style.color = 'red';
+      setTimeout(() => { msg.textContent = ''; }, 8000);
+    }
   }
   return false;
 }
