@@ -717,9 +717,6 @@ document.getElementById('sudoku-board').addEventListener('click', function(e) {
         blinkCells(num);
       }
     }
-  } else {
-    highlightSameNumbers('');
-    lastSelectedCell = null;
   }
 });
 
