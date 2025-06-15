@@ -1,3 +1,4 @@
+// Global variables
 let puzzle = [
   [5,3,0,0,7,0,0,0,0],
   [6,0,0,1,9,5,0,0,0],
@@ -9,18 +10,25 @@ let puzzle = [
   [0,0,0,4,1,9,0,0,5],
   [0,0,0,0,8,0,0,7,9]
 ];
+let pencilMode = false;
+let pencilMarks = Array.from({length:9},()=>Array.from({length:9},()=>[]));
+let selectedHighlightNumber = null;
+let selectedNumber = null;
+let undoStack = [];
+let redoStack = [];
+let lastSelectedCell = null;
+let messageTimeout = null;
 
+// Utility functions
 function deepCopy(board) {
   return board.map(row => row.slice());
 }
-
 function shuffle(array) {
   for (let i = array.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
     [array[i], array[j]] = [array[j], array[i]];
   }
 }
-
 function isSafe(board, row, col, num) {
   for (let x = 0; x < 9; x++) {
     if (board[row][x] === num || board[x][col] === num) return false;
@@ -33,7 +41,6 @@ function isSafe(board, row, col, num) {
   }
   return true;
 }
-
 function solveSudoku(board) {
   for (let row = 0; row < 9; row++) {
     for (let col = 0; col < 9; col++) {
@@ -51,7 +58,6 @@ function solveSudoku(board) {
   }
   return true;
 }
-
 function countSolutions(board) {
   let count = 0;
   function helper(bd) {
@@ -74,13 +80,11 @@ function countSolutions(board) {
   helper(deepCopy(board));
   return count;
 }
-
 function getCluesForDifficulty(difficulty) {
   if (difficulty === 'easy') return 36;
   if (difficulty === 'medium') return 32;
   return 28; // hard
 }
-
 function removeCells(board, clues) {
   let attempts = 5;
   let puzzle = deepCopy(board);
@@ -102,7 +106,6 @@ function removeCells(board, clues) {
   }
   return puzzle;
 }
-
 function generateFullBoard() {
   const board = Array.from({length:9},()=>Array(9).fill(0));
   function fill(row, col) {
@@ -123,21 +126,11 @@ function generateFullBoard() {
   fill(0,0);
   return board;
 }
-
 function generatePuzzle(difficulty) {
   let full = generateFullBoard();
   let clues = getCluesForDifficulty(difficulty);
   return removeCells(full, clues);
 }
-
-let pencilMode = false;
-let pencilMarks = Array.from({length:9},()=>Array.from({length:9},()=>[]));
-
-let selectedNumber = null;
-
-let undoStack = [];
-let redoStack = [];
-
 function renderNumberRow() {
   const numberRow = document.getElementById('number-row');
   numberRow.innerHTML = '';
@@ -172,7 +165,6 @@ function renderNumberRow() {
   });
   numberRow.appendChild(eraseBtn);
 }
-
 function renderUndoRedoRow() {
   const row = document.getElementById('undo-redo-row');
   row.innerHTML = '';
@@ -189,7 +181,6 @@ function renderUndoRedoRow() {
   redoBtn.addEventListener('click', redoAction);
   row.appendChild(redoBtn);
 }
-
 function pushUndoState() {
   const state = {
     board: getBoardState(),
@@ -200,7 +191,6 @@ function pushUndoState() {
   redoStack = [];
   renderUndoRedoRow();
 }
-
 function undoAction() {
   if (undoStack.length === 0) return;
   const state = undoStack.pop();
@@ -212,7 +202,6 @@ function undoAction() {
   restoreState(state);
   renderUndoRedoRow();
 }
-
 function redoAction() {
   if (redoStack.length === 0) return;
   const state = redoStack.pop();
@@ -224,7 +213,6 @@ function redoAction() {
   restoreState(state);
   renderUndoRedoRow();
 }
-
 function restoreState(state) {
   // Only update editable cells
   const cells = document.querySelectorAll('.sudoku-cell');
@@ -245,7 +233,6 @@ function restoreState(state) {
   // Trigger input event for highlights, etc.
   document.getElementById('sudoku-board').dispatchEvent(new Event('input', {bubbles:true}));
 }
-
 // Patch all user actions to pushUndoState
 function patchUserActionUndo() {
   // For cell input via number row
@@ -263,7 +250,6 @@ function patchUserActionUndo() {
     renderUndoRedoRow();
   }, true);
 }
-
 function createBoard() {
   const board = document.getElementById('sudoku-board');
   board.innerHTML = '';
@@ -287,83 +273,6 @@ function createBoard() {
         input.type = 'button';
         input.value = '';
         input.tabIndex = 0;
-        input.addEventListener('click', function(e) {
-          if (selectedNumber === null) return;
-          if (selectedNumber === 0) {
-            input.value = '';
-            input.classList.remove('wrong');
-            input.classList.remove('highlight');
-            pencilMarks[row][col] = [];
-            updatePencilMarks(row, col);
-            saveBoardState();
-            selectedNumber = null;
-            renderNumberRow();
-            return;
-          }
-          if (pencilMode) {
-            let idx = pencilMarks[row][col].indexOf(String(selectedNumber));
-            if (idx === -1) {
-              pencilMarks[row][col].push(String(selectedNumber));
-              pencilMarks[row][col].sort();
-            } else {
-              pencilMarks[row][col].splice(idx, 1);
-            }
-            updatePencilMarks(row, col);
-            saveBoardState();
-            selectedNumber = null;
-            renderNumberRow();
-          } else {
-            input.value = selectedNumber;
-            pencilMarks[row][col] = [];
-            updatePencilMarks(row, col);
-            saveBoardState();
-            input.dispatchEvent(new Event('input', {bubbles:true}));
-            selectedNumber = null;
-            renderNumberRow();
-          }
-        });
-        // Keyboard support
-        input.addEventListener('keydown', function(e) {
-          if (e.key >= '1' && e.key <= '9') {
-            e.preventDefault();
-            if (pencilMode) {
-              let idx = pencilMarks[row][col].indexOf(e.key);
-              if (idx === -1) {
-                pencilMarks[row][col].push(e.key);
-                pencilMarks[row][col].sort();
-              } else {
-                pencilMarks[row][col].splice(idx, 1);
-              }
-              updatePencilMarks(row, col);
-              saveBoardState();
-            } else {
-              input.value = e.key;
-              pencilMarks[row][col] = [];
-              updatePencilMarks(row, col);
-              saveBoardState();
-              input.dispatchEvent(new Event('input', {bubbles:true}));
-            }
-          } else if (e.key === 'Backspace' || e.key === 'Delete') {
-            e.preventDefault();
-            input.value = '';
-            pencilMarks[row][col] = [];
-            updatePencilMarks(row, col);
-            saveBoardState();
-            input.dispatchEvent(new Event('input', {bubbles:true}));
-          } else if (e.key === 'ArrowLeft') {
-            e.preventDefault();
-            focusCell(row, col - 1);
-          } else if (e.key === 'ArrowRight') {
-            e.preventDefault();
-            focusCell(row, col + 1);
-          } else if (e.key === 'ArrowUp') {
-            e.preventDefault();
-            focusCell(row - 1, col);
-          } else if (e.key === 'ArrowDown') {
-            e.preventDefault();
-            focusCell(row + 1, col);
-          }
-        });
       }
       const pencilDiv = document.createElement('div');
       pencilDiv.className = 'pencil-marks';
@@ -374,7 +283,6 @@ function createBoard() {
     }
   }
 }
-
 function focusCell(row, col) {
   if (row < 0 || row > 8 || col < 0 || col > 8) return;
   const idx = row * 9 + col;
@@ -386,7 +294,6 @@ function focusCell(row, col) {
     input.focus();
   }
 }
-
 function onCellKeyDown(e) {
   if (!pencilMode) return;
   if (e.key >= '1' && e.key <= '9') {
@@ -412,7 +319,6 @@ function onCellKeyDown(e) {
     saveBoardState();
   }
 }
-
 function updatePencilMarks(row, col) {
   const board = document.getElementById('sudoku-board');
   const idx = row * 9 + col;
@@ -427,7 +333,6 @@ function updatePencilMarks(row, col) {
     pencilDiv.innerHTML = pencilMarks[row][col].map(n => `<span>${n}</span>`).join(' ');
   }
 }
-
 function onInput(e) {
   if (pencilMode) {
     e.target.value = '';
@@ -444,7 +349,6 @@ function onInput(e) {
     updatePencilMarks(row, col);
   }
 }
-
 function getBoardState() {
   const cells = document.querySelectorAll('.sudoku-cell');
   const state = Array.from({length: 9}, () => Array(9).fill(0));
@@ -455,7 +359,6 @@ function getBoardState() {
   });
   return state;
 }
-
 function saveBoardState() {
   const cells = document.querySelectorAll('.sudoku-cell');
   const state = Array.from({length: 9}, () => Array(9).fill(0));
@@ -468,7 +371,6 @@ function saveBoardState() {
   localStorage.setItem('sudoku-puzzle', JSON.stringify(puzzle));
   localStorage.setItem('sudoku-pencil-marks', JSON.stringify(pencilMarks));
 }
-
 function loadBoardState() {
   const savedPuzzle = localStorage.getItem('sudoku-puzzle');
   const savedState = localStorage.getItem('sudoku-board-state');
@@ -497,7 +399,6 @@ function loadBoardState() {
   }
   return false;
 }
-
 function isValid(board) {
   // Check rows, columns, and 3x3 boxes
   for (let i = 0; i < 9; i++) {
@@ -533,7 +434,6 @@ function isValid(board) {
   }
   return true;
 }
-
 function isComplete(board) {
   for (let row = 0; row < 9; row++) {
     for (let col = 0; col < 9; col++) {
@@ -542,7 +442,6 @@ function isComplete(board) {
   }
   return true;
 }
-
 function fillSolution(solution) {
   const cells = document.querySelectorAll('.sudoku-cell');
   cells.forEach(cell => {
@@ -551,7 +450,6 @@ function fillSolution(solution) {
     cell.value = solution[row][col];
   });
 }
-
 function highlightWrongCells() {
   const cells = document.querySelectorAll('.sudoku-cell');
   let board = getBoardState();
@@ -570,14 +468,13 @@ function highlightWrongCells() {
     }
   });
 }
-
 function clearWrongHighlights() {
   document.querySelectorAll('.sudoku-cell.wrong').forEach(cell => {
     cell.classList.remove('wrong');
   });
 }
-
-function highlightSameNumbers(num) {
+function highlightSameNumbers() {
+  const num = selectedHighlightNumber;
   const cells = document.querySelectorAll('.sudoku-cell');
   cells.forEach(cell => {
     if (cell.value === num && num !== '') {
@@ -601,18 +498,16 @@ function highlightSameNumbers(num) {
     }
   });
 }
-
 function blinkCells(num) {
+  // Remove all highlighted numbers
+  document.querySelectorAll('.sudoku-cell.selected-number').forEach(cell => {
+    cell.classList.remove('selected-number');
+  });
+  document.querySelectorAll('.pencil-marks span.highlighted').forEach(span => {
+    span.classList.remove('highlighted');
+  });
   const cells = Array.from(document.querySelectorAll('.sudoku-cell')).filter(cell => cell.value === num);
   let blinks = 0;
-  // Remove selected-number class if present
-  let removed = [];
-  cells.forEach(cell => {
-    if (cell.classList.contains('selected-number')) {
-      cell.classList.remove('selected-number');
-      removed.push(cell);
-    }
-  });
   function doBlink() {
     cells.forEach(cell => cell.classList.add('blink'));
     setTimeout(() => {
@@ -621,23 +516,13 @@ function blinkCells(num) {
       if (blinks < 3) {
         setTimeout(doBlink, 100);
       } else {
-        // Reapply selected-number class only if cell still has the value
-        removed.forEach(cell => {
-          if (cell.value === num) {
-            cell.classList.add('selected-number');
-          }
-        });
-        // If lastSelectedCell is no longer valid, clear selection
-        if (!lastSelectedCell || lastSelectedCell.value !== num) {
-          highlightSameNumbers('');
-          lastSelectedCell = null;
-        }
+        // Re-highlight after blinking
+        setTimeout(highlightSameNumbers, 350);
       }
     }, 150);
   }
   doBlink();
 }
-
 function highlightCurrentWrongCells() {
   const cells = document.querySelectorAll('.sudoku-cell');
   let board = getBoardState();
@@ -690,156 +575,12 @@ function highlightCurrentWrongCells() {
     }
   });
 }
-
 function setPuzzle(newPuzzle) {
   puzzle = newPuzzle;
   createBoard();
   document.getElementById('message').textContent = '';
   saveBoardState();
 }
-
-let lastSelectedCell = null;
-document.getElementById('sudoku-board').addEventListener('click', function(e) {
-  if (e.target.classList.contains('fixed')) {
-    const num = e.target.value;
-    if (lastSelectedCell === e.target) {
-      // Unselect if clicking the same cell again
-      highlightSameNumbers('');
-      lastSelectedCell = null;
-    } else {
-      highlightSameNumbers(num);
-      lastSelectedCell = e.target;
-      // Flash if all 9 of this number are present
-      const cells = document.querySelectorAll('.sudoku-cell');
-      let count = 0;
-      cells.forEach(cell => {
-        if (cell.value === num) count++;
-      });
-      if (count === 9) {
-        blinkCells(num);
-      }
-    }
-  }
-});
-
-document.getElementById('highlight-wrong').addEventListener('change', function() {
-  if (this.checked) {
-    highlightWrongCells();
-  } else {
-    clearWrongHighlights();
-  }
-});
-
-document.getElementById('highlight-current-wrong').addEventListener('change', function() {
-  if (this.checked) {
-    highlightCurrentWrongCells();
-  } else {
-    clearWrongHighlights();
-  }
-});
-
-const sudokuBoard = document.getElementById('sudoku-board');
-sudokuBoard.addEventListener('input', function(e) {
-  if (document.getElementById('highlight-current-wrong').checked) {
-    highlightCurrentWrongCells();
-  } else if (document.getElementById('highlight-wrong').checked) {
-    highlightWrongCells();
-  } else {
-    clearWrongHighlights();
-  }
-  // Blink if all 9 of the entered number are present
-  if (e && e.target && /^[1-9]$/.test(e.target.value)) {
-    const num = e.target.value;
-    const cells = document.querySelectorAll('.sudoku-cell');
-    let count = 0;
-    cells.forEach(cell => {
-      if (cell.value === num) count++;
-    });
-    if (count === 9) {
-      blinkCells(num);
-    }
-  }
-  saveBoardState();
-  // Auto-check for completion and correct solution, show message
-  const board = getBoardState();
-  if (isComplete(board) && isValid(board)) {
-    checkSolutionAndAnimate();
-  }
-  // If a selected cell is deleted, update selection
-  if (lastSelectedCell && (!lastSelectedCell.value || lastSelectedCell.value === '')) {
-    highlightSameNumbers('');
-    lastSelectedCell = null;
-  }
-});
-
-document.getElementById('check-btn').addEventListener('click', checkSolutionAndAnimate);
-
-document.getElementById('solve-btn').addEventListener('click', () => {
-  // Deep copy the current puzzle
-  let board = puzzle.map(row => row.slice());
-  if (solveSudoku(board)) {
-    fillSolution(board);
-    showMessage('Puzzle solved!', 'blue');
-  } else {
-    showMessage('No solution found.', 'red');
-  }
-});
-
-document.getElementById('clear-btn').addEventListener('click', () => {
-  const cells = document.querySelectorAll('.sudoku-cell');
-  cells.forEach(cell => {
-    if (!cell.classList.contains('fixed')) {
-      cell.value = '';
-      const row = +cell.dataset.row;
-      const col = +cell.dataset.col;
-      pencilMarks[row][col] = [];
-      updatePencilMarks(row, col);
-    }
-  });
-  showMessage('');
-  saveBoardState();
-});
-
-document.getElementById('new-puzzle-btn').addEventListener('click', () => {
-  const difficulty = document.getElementById('difficulty').value;
-  setPuzzle(generatePuzzle(difficulty));
-  pencilMarks = Array.from({length:9},()=>Array.from({length:9},()=>[]));
-  saveBoardState();
-});
-
-document.getElementById('pencil-mode-btn').addEventListener('click', function() {
-  pencilMode = !pencilMode;
-  this.textContent = 'Pencil Mark Mode: ' + (pencilMode ? 'On' : 'Off');
-});
-
-document.getElementById('share-btn').addEventListener('click', function() {
-  // Encode puzzle and current state using LZString
-  const puzzleStr = LZString.compressToEncodedURIComponent(JSON.stringify(puzzle));
-  const state = getBoardState();
-  const stateStr = LZString.compressToEncodedURIComponent(JSON.stringify(state));
-  const url = `${location.origin}${location.pathname}?puzzle=${puzzleStr}&state=${stateStr}`;
-  // Copy to clipboard
-  const shareMsg = document.getElementById('share-message');
-  function showShareMsg(text, link) {
-    if (link) {
-      shareMsg.innerHTML = `${text} <a href="${link}" target="_blank" style="word-break:break-all;">${link}</a>`;
-    } else {
-      shareMsg.textContent = text;
-    }
-    shareMsg.style.display = 'inline';
-    setTimeout(() => { shareMsg.style.display = 'none'; }, 8000);
-  }
-  if (navigator.clipboard) {
-    navigator.clipboard.writeText(url).then(() => {
-      showShareMsg('Link copied! Share it with a friend.');
-    }, () => {
-      showShareMsg('Share this link:', url);
-    });
-  } else {
-    showShareMsg('Share this link:', url);
-  }
-});
-
 function loadFromUrl() {
   const params = new URLSearchParams(window.location.search);
   const puzzleStr = params.get('puzzle');
@@ -873,7 +614,6 @@ function loadFromUrl() {
   }
   return false;
 }
-
 function resizeBoard() {
   const board = document.getElementById('sudoku-board');
   if (!board) return;
@@ -884,20 +624,6 @@ function resizeBoard() {
   const scale = Math.min(w, h) / baseSize;
   board.style.zoom = scale < 1 ? scale : 1;
 }
-
-window.onload = function() {
-  renderNumberRow();
-  renderUndoRedoRow();
-  if (!loadFromUrl() && !loadBoardState()) {
-    pencilMarks = Array.from({length:9},()=>Array.from({length:9},()=>[]));
-    createBoard();
-  }
-  patchUserActionUndo();
-  resizeBoard();
-};
-
-window.addEventListener('resize', resizeBoard);
-
 function checkSolutionAndAnimate() {
   const board = getBoardState();
   const message = document.getElementById('message');
@@ -919,8 +645,6 @@ function checkSolutionAndAnimate() {
     return false;
   }
 }
-
-let messageTimeout = null;
 function showMessage(text, color = '', duration = 8000) {
   const message = document.getElementById('message');
   message.textContent = text;
@@ -941,3 +665,236 @@ function showMessage(text, color = '', duration = 8000) {
     }, duration);
   }
 }
+
+// Event handlers and DOM event bindings
+document.getElementById('sudoku-board').addEventListener('click', function(e) {
+  if (e.target.classList.contains('fixed')) {
+    const num = e.target.value;
+    if (selectedHighlightNumber === num) {
+      selectedHighlightNumber = null;
+      highlightSameNumbers();
+    } else {
+      selectedHighlightNumber = num;
+      highlightSameNumbers();
+    }
+    lastSelectedCell = e.target;
+    // Flash if all 9 of this number are present
+    const cells = document.querySelectorAll('.sudoku-cell');
+    let count = 0;
+    cells.forEach(cell => {
+      if (cell.value === num) count++;
+    });
+    if (count === 9) {
+      blinkCells(num);
+    }
+  } else if (e.target.classList.contains('sudoku-cell') && !e.target.classList.contains('fixed')) {
+    // Handle cell input click logic (was cellInputClickHandler)
+    const input = e.target;
+    const row = +input.dataset.row;
+    const col = +input.dataset.col;
+    if (selectedNumber === null) return;
+    if (selectedNumber === 0) {
+      input.value = '';
+      input.classList.remove('wrong');
+      pencilMarks[row][col] = [];
+      updatePencilMarks(row, col);
+      saveBoardState();
+      selectedNumber = null;
+      renderNumberRow();
+      highlightSameNumbers();
+      return;
+    }
+    if (pencilMode) {
+      let idx = pencilMarks[row][col].indexOf(String(selectedNumber));
+      if (idx === -1) {
+        pencilMarks[row][col].push(String(selectedNumber));
+        pencilMarks[row][col].sort();
+      } else {
+        pencilMarks[row][col].splice(idx, 1);
+      }
+      updatePencilMarks(row, col);
+      saveBoardState();
+      selectedNumber = null;
+      renderNumberRow();
+      highlightSameNumbers();
+    } else {
+      input.value = selectedNumber;
+      pencilMarks[row][col] = [];
+      updatePencilMarks(row, col);
+      saveBoardState();
+      input.dispatchEvent(new Event('input', {bubbles:true}));
+      selectedNumber = null;
+      renderNumberRow();
+    }
+  }
+});
+document.getElementById('sudoku-board').addEventListener('keydown', function(e) {
+  if (e.target.classList.contains('sudoku-cell') && !e.target.classList.contains('fixed')) {
+    // Handle cell input keydown logic (was cellInputKeydownHandler)
+    const input = e.target;
+    const row = +input.dataset.row;
+    const col = +input.dataset.col;
+    if (e.key >= '1' && e.key <= '9') {
+      e.preventDefault();
+      if (pencilMode) {
+        let idx = pencilMarks[row][col].indexOf(e.key);
+        if (idx === -1) {
+          pencilMarks[row][col].push(e.key);
+          pencilMarks[row][col].sort();
+        } else {
+          pencilMarks[row][col].splice(idx, 1);
+        }
+        updatePencilMarks(row, col);
+        saveBoardState();
+      } else {
+        input.value = e.key;
+        pencilMarks[row][col] = [];
+        updatePencilMarks(row, col);
+        saveBoardState();
+        input.dispatchEvent(new Event('input', {bubbles:true}));
+      }
+    } else if (e.key === 'Backspace' || e.key === 'Delete') {
+      e.preventDefault();
+      input.value = '';
+      pencilMarks[row][col] = [];
+      updatePencilMarks(row, col);
+      saveBoardState();
+      input.dispatchEvent(new Event('input', {bubbles:true}));
+    } else if (e.key === 'ArrowLeft') {
+      e.preventDefault();
+      focusCell(row, col - 1);
+    } else if (e.key === 'ArrowRight') {
+      e.preventDefault();
+      focusCell(row, col + 1);
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      focusCell(row - 1, col);
+    } else if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      focusCell(row + 1, col);
+    }
+  }
+});
+document.getElementById('highlight-wrong').addEventListener('change', function() {
+  if (this.checked) {
+    highlightWrongCells();
+  } else {
+    clearWrongHighlights();
+  }
+});
+document.getElementById('highlight-current-wrong').addEventListener('change', function() {
+  if (this.checked) {
+    highlightCurrentWrongCells();
+  } else {
+    clearWrongHighlights();
+  }
+});
+const sudokuBoard = document.getElementById('sudoku-board');
+sudokuBoard.addEventListener('input', function(e) {
+  if (document.getElementById('highlight-current-wrong').checked) {
+    highlightCurrentWrongCells();
+  } else if (document.getElementById('highlight-wrong').checked) {
+    highlightWrongCells();
+  } else {
+    clearWrongHighlights();
+  }
+
+  highlightSameNumbers();
+
+  // Blink if all 9 of the entered number are present
+  if (e && e.target && /^[1-9]$/.test(e.target.value)) {
+    const num = e.target.value;
+    const cells = document.querySelectorAll('.sudoku-cell');
+    let count = 0;
+    cells.forEach(cell => {
+      if (cell.value === num) count++;
+    });
+    if (count === 9) {
+      blinkCells(num);
+    }
+  }
+  saveBoardState();
+  // Auto-check for completion and correct solution, show message
+  const board = getBoardState();
+  if (isComplete(board) && isValid(board)) {
+    checkSolutionAndAnimate();
+  }
+  // If a selected cell is deleted, update selection
+  if (lastSelectedCell && (!lastSelectedCell.value || lastSelectedCell.value === '')) {
+    highlightSameNumbers('');
+    lastSelectedCell = null;
+  }
+});
+document.getElementById('check-btn').addEventListener('click', checkSolutionAndAnimate);
+document.getElementById('solve-btn').addEventListener('click', () => {
+  // Deep copy the current puzzle
+  let board = puzzle.map(row => row.slice());
+  if (solveSudoku(board)) {
+    fillSolution(board);
+    showMessage('Puzzle solved!', 'blue');
+  } else {
+    showMessage('No solution found.', 'red');
+  }
+});
+document.getElementById('clear-btn').addEventListener('click', () => {
+  const cells = document.querySelectorAll('.sudoku-cell');
+  cells.forEach(cell => {
+    if (!cell.classList.contains('fixed')) {
+      cell.value = '';
+      const row = +cell.dataset.row;
+      const col = +cell.dataset.col;
+      pencilMarks[row][col] = [];
+      updatePencilMarks(row, col);
+    }
+  });
+  showMessage('');
+  saveBoardState();
+});
+document.getElementById('new-puzzle-btn').addEventListener('click', () => {
+  const difficulty = document.getElementById('difficulty').value;
+  setPuzzle(generatePuzzle(difficulty));
+  pencilMarks = Array.from({length:9},()=>Array.from({length:9},()=>[]));
+  saveBoardState();
+});
+document.getElementById('pencil-mode-btn').addEventListener('click', function() {
+  pencilMode = !pencilMode;
+  this.textContent = 'Pencil Mark Mode: ' + (pencilMode ? 'On' : 'Off');
+});
+document.getElementById('share-btn').addEventListener('click', function() {
+  // Encode puzzle and current state using LZString
+  const puzzleStr = LZString.compressToEncodedURIComponent(JSON.stringify(puzzle));
+  const state = getBoardState();
+  const stateStr = LZString.compressToEncodedURIComponent(JSON.stringify(state));
+  const url = `${location.origin}${location.pathname}?puzzle=${puzzleStr}&state=${stateStr}`;
+  // Copy to clipboard
+  const shareMsg = document.getElementById('share-message');
+  function showShareMsg(text, link) {
+    if (link) {
+      shareMsg.innerHTML = `${text} <a href="${link}" target="_blank" style="word-break:break-all;">${link}</a>`;
+    } else {
+      shareMsg.textContent = text;
+    }
+    shareMsg.style.display = 'inline';
+    setTimeout(() => { shareMsg.style.display = 'none'; }, 8000);
+  }
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(url).then(() => {
+      showShareMsg('Link copied! Share it with a friend.');
+    }, () => {
+      showShareMsg('Share this link:', url);
+    });
+  } else {
+    showShareMsg('Share this link:', url);
+  }
+});
+window.onload = function() {
+  renderNumberRow();
+  renderUndoRedoRow();
+  if (!loadFromUrl() && !loadBoardState()) {
+    pencilMarks = Array.from({length:9},()=>Array.from({length:9},()=>[]));
+    createBoard();
+  }
+  patchUserActionUndo();
+  resizeBoard();
+};
+window.addEventListener('resize', resizeBoard);
