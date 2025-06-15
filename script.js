@@ -294,6 +294,8 @@ function createBoard() {
             pencilMarks[row][col] = [];
             updatePencilMarks(row, col);
             saveBoardState();
+            selectedNumber = null;
+            renderNumberRow();
             return;
           }
           if (pencilMode) {
@@ -306,12 +308,16 @@ function createBoard() {
             }
             updatePencilMarks(row, col);
             saveBoardState();
+            selectedNumber = null;
+            renderNumberRow();
           } else {
             input.value = selectedNumber;
             pencilMarks[row][col] = [];
             updatePencilMarks(row, col);
             saveBoardState();
             input.dispatchEvent(new Event('input', {bubbles:true}));
+            selectedNumber = null;
+            renderNumberRow();
           }
         });
         // Keyboard support
