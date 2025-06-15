@@ -291,6 +291,8 @@ function createBoard() {
           if (selectedNumber === null) return;
           if (selectedNumber === 0) {
             input.value = '';
+            input.classList.remove('wrong');
+            input.classList.remove('highlight');
             pencilMarks[row][col] = [];
             updatePencilMarks(row, col);
             saveBoardState();
