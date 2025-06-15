@@ -709,9 +709,6 @@ document.getElementById('sudoku-board').addEventListener('click', function(e) {
         blinkCells(num, true);
       }
     }
-  } else {
-    highlightSameNumbers('');
-    lastSelectedCell = null;
   }
 });
 
