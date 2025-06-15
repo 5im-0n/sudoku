@@ -600,19 +600,17 @@ function highlightSameNumbers(num) {
   });
 }
 
-function blinkCells(num, restoreSelected = false) {
+function blinkCells(num) {
   const cells = Array.from(document.querySelectorAll('.sudoku-cell')).filter(cell => cell.value === num);
   let blinks = 0;
-  // Remove selected-number class if needed
+  // Remove selected-number class if present
   let removed = [];
-  if (restoreSelected) {
-    cells.forEach(cell => {
-      if (cell.classList.contains('selected-number')) {
-        cell.classList.remove('selected-number');
-        removed.push(cell);
-      }
-    });
-  }
+  cells.forEach(cell => {
+    if (cell.classList.contains('selected-number')) {
+      cell.classList.remove('selected-number');
+      removed.push(cell);
+    }
+  });
   function doBlink() {
     cells.forEach(cell => cell.classList.add('blink'));
     setTimeout(() => {
@@ -620,7 +618,7 @@ function blinkCells(num, restoreSelected = false) {
       blinks++;
       if (blinks < 3) {
         setTimeout(doBlink, 100);
-      } else if (restoreSelected) {
+      } else {
         removed.forEach(cell => cell.classList.add('selected-number'));
       }
     }, 150);
@@ -706,9 +704,12 @@ document.getElementById('sudoku-board').addEventListener('click', function(e) {
         if (cell.value === num) count++;
       });
       if (count === 9) {
-        blinkCells(num, true);
+        blinkCells(num);
       }
     }
+  } else {
+    highlightSameNumbers('');
+    lastSelectedCell = null;
   }
 });
 
