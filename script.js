@@ -619,7 +619,17 @@ function blinkCells(num) {
       if (blinks < 3) {
         setTimeout(doBlink, 100);
       } else {
-        removed.forEach(cell => cell.classList.add('selected-number'));
+        // Reapply selected-number class only if cell still has the value
+        removed.forEach(cell => {
+          if (cell.value === num) {
+            cell.classList.add('selected-number');
+          }
+        });
+        // If lastSelectedCell is no longer valid, clear selection
+        if (!lastSelectedCell || lastSelectedCell.value !== num) {
+          highlightSameNumbers('');
+          lastSelectedCell = null;
+        }
       }
     }, 150);
   }
@@ -755,6 +765,11 @@ sudokuBoard.addEventListener('input', function(e) {
   const board = getBoardState();
   if (isComplete(board) && isValid(board)) {
     checkSolutionAndAnimate();
+  }
+  // If a selected cell is deleted, update selection
+  if (lastSelectedCell && (!lastSelectedCell.value || lastSelectedCell.value === '')) {
+    highlightSameNumbers('');
+    lastSelectedCell = null;
   }
 });
 
