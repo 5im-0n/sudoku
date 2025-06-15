@@ -627,6 +627,7 @@ function resizeBoard() {
 function checkSolutionAndAnimate() {
   const board = getBoardState();
   const message = document.getElementById('message');
+
   if (!isComplete(board)) {
     showMessage('The puzzle is not complete.', 'orange');
     return false;
@@ -634,6 +635,8 @@ function checkSolutionAndAnimate() {
   if (isValid(board)) {
     showMessage('Congratulations! You solved the puzzle!', 'green');
     // Rainbow effect
+    selectedHighlightNumber = '';
+    highlightSameNumbers();
     const cells = document.querySelectorAll('.sudoku-cell');
     cells.forEach(cell => cell.classList.add('rainbow'));
     setTimeout(() => {
