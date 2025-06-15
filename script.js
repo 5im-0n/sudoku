@@ -861,6 +861,11 @@ function loadFromUrl() {
           cell.value = state[row][col] ? state[row][col] : '';
         }
       });
+      // Remove puzzle and state params from URL
+      const url = new URL(window.location);
+      url.searchParams.delete('puzzle');
+      url.searchParams.delete('state');
+      window.history.replaceState({}, '', url.pathname + url.search);
       return true;
     } catch (e) {
       showMessage('Failed to load shared puzzle.', 'red');
