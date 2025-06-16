@@ -294,31 +294,6 @@ function focusCell(row, col) {
     input.focus();
   }
 }
-function onCellKeyDown(e) {
-  if (!pencilMode) return;
-  if (e.key >= '1' && e.key <= '9') {
-    e.preventDefault();
-    const row = +e.target.dataset.row;
-    const col = +e.target.dataset.col;
-    const num = e.key;
-    let idx = pencilMarks[row][col].indexOf(num);
-    if (idx === -1) {
-      pencilMarks[row][col].push(num);
-      pencilMarks[row][col].sort();
-    } else {
-      pencilMarks[row][col].splice(idx, 1);
-    }
-    updatePencilMarks(row, col);
-    saveBoardState();
-  } else if (e.key === 'Backspace' || e.key === 'Delete') {
-    e.preventDefault();
-    const row = +e.target.dataset.row;
-    const col = +e.target.dataset.col;
-    pencilMarks[row][col] = [];
-    updatePencilMarks(row, col);
-    saveBoardState();
-  }
-}
 function updatePencilMarks(row, col) {
   const board = document.getElementById('sudoku-board');
   const idx = row * 9 + col;
@@ -918,6 +893,7 @@ document.getElementById('sudoku-board').addEventListener('keydown', function(e) 
         }
         updatePencilMarks(row, col);
         saveBoardState();
+        input.dispatchEvent(new Event('input', {bubbles:true}));
       } else {
         input.value = e.key;
         pencilMarks[row][col] = [];
