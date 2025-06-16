@@ -641,6 +641,7 @@ function checkSolutionAndAnimate() {
     cells.forEach(cell => cell.classList.add('rainbow'));
     setTimeout(() => {
       cells.forEach(cell => cell.classList.remove('rainbow'));
+      epicCelebration();
     }, 2500);
     return true;
   } else {
@@ -667,6 +668,174 @@ function showMessage(text, color = '', duration = 8000) {
       message.textContent = '';
     }, duration);
   }
+}
+function epicCelebration() {
+  // Remove any existing party overlay
+  let old = document.getElementById('epic-party-overlay');
+  if (old) old.remove();
+  const overlay = document.createElement('div');
+  overlay.id = 'epic-party-overlay';
+  overlay.style.position = 'fixed';
+  overlay.style.left = '0';
+  overlay.style.top = '0';
+  overlay.style.width = '100vw';
+  overlay.style.height = '100vh';
+  overlay.style.zIndex = '9999';
+  overlay.style.pointerEvents = 'none';
+  overlay.style.overflow = 'hidden';
+  overlay.style.background = 'rgba(255,255,255,0.01)';
+  document.body.appendChild(overlay);
+
+  // Rainbow background animation
+  overlay.style.background = 'linear-gradient(270deg, #ff66cc, #fffd66, #66ff66, #66ffff, #6666ff, #ff66ff, #ff6666)';
+  overlay.style.backgroundSize = '1400% 1400%';
+  overlay.animate([
+    { backgroundPosition: '0% 50%' },
+    { backgroundPosition: '100% 50%' }
+  ], {
+    duration: 6000,
+    iterations: Infinity
+  });
+
+  // Add unicorns (using better web images)
+  const unicornImgs = [
+    'assets/unicorn.png'
+  ];
+  for (let i = 0; i < 3; i++) {
+    const unicorn = document.createElement('img');
+    unicorn.className = 'epic-unicorn';
+    unicorn.src = unicornImgs[i % unicornImgs.length];
+    unicorn.alt = 'Unicorn';
+    unicorn.style.position = 'absolute';
+    unicorn.style.top = (10 + i*25) + '%';
+    unicorn.style.left = '-220px';
+    unicorn.style.width = '180px';
+    unicorn.style.height = 'auto';
+    unicorn.style.zIndex = '10001';
+    unicorn.style.filter = 'drop-shadow(0 0 16px #fff)';
+    overlay.appendChild(unicorn);
+    unicorn.animate([
+      { left: '-220px' },
+      { left: '110vw' }
+    ], {
+      duration: 4000 + i*800,
+      delay: i*400,
+      easing: 'ease-in-out',
+      fill: 'forwards'
+    });
+  }
+
+  // Add helicopters (using better web images)
+  const heliImgs = [
+    'assets/helicopter.png'
+  ];
+  for (let i = 0; i < 2; i++) {
+    const heli = document.createElement('img');
+    heli.className = 'epic-heli';
+    heli.src = heliImgs[i % heliImgs.length];
+    heli.alt = 'Helicopter';
+    heli.style.position = 'absolute';
+    heli.style.top = (60 + i*10) + '%';
+    heli.style.left = '110vw';
+    heli.style.width = '140px';
+    heli.style.height = 'auto';
+    heli.style.zIndex = '10002';
+    heli.style.filter = 'drop-shadow(0 0 12px #333)';
+    overlay.appendChild(heli);
+    heli.animate([
+      { left: '110vw' },
+      { left: '-180px' }
+    ], {
+      duration: 5000 + i*1000,
+      delay: i*600,
+      easing: 'linear',
+      fill: 'forwards'
+    });
+  }
+
+  // Add rainbow arcs
+  for (let i = 0; i < 2; i++) {
+    const rainbow = document.createElement('div');
+    rainbow.className = 'epic-rainbow';
+    rainbow.style.position = 'absolute';
+    rainbow.style.left = (i === 0 ? '5vw' : '60vw');
+    rainbow.style.top = (i === 0 ? '10vh' : '20vh');
+    rainbow.style.width = '300px';
+    rainbow.style.height = '150px';
+    rainbow.style.zIndex = '10000';
+    rainbow.innerHTML = `
+      <svg viewBox="0 0 300 150" width="300" height="150">
+        <path d="M20,130 Q150,-40 280,130" stroke="#ff6666" stroke-width="18" fill="none"/>
+        <path d="M35,130 Q150,-20 265,130" stroke="#fffd66" stroke-width="14" fill="none"/>
+        <path d="M50,130 Q150,0 250,130" stroke="#66ff66" stroke-width="10" fill="none"/>
+        <path d="M65,130 Q150,20 235,130" stroke="#66ffff" stroke-width="7" fill="none"/>
+        <path d="M80,130 Q150,40 220,130" stroke="#6666ff" stroke-width="5" fill="none"/>
+      </svg>
+    `;
+    overlay.appendChild(rainbow);
+    rainbow.animate([
+      { opacity: 0, transform: 'scale(0.7)' },
+      { opacity: 1, transform: 'scale(1.1)' },
+      { opacity: 1, transform: 'scale(1)' }
+    ], {
+      duration: 1200,
+      delay: i*300,
+      fill: 'forwards'
+    });
+  }
+
+  // Add confetti/party effect
+  for (let i = 0; i < 80; i++) {
+    const conf = document.createElement('div');
+    conf.className = 'epic-confetti';
+    conf.style.position = 'absolute';
+    conf.style.left = Math.random()*100 + 'vw';
+    conf.style.top = '-20px';
+    conf.style.width = '10px';
+    conf.style.height = '18px';
+    conf.style.background = `hsl(${Math.random()*360},90%,60%)`;
+    conf.style.borderRadius = '3px';
+    conf.style.opacity = '0.85';
+    conf.style.zIndex = '10003';
+    overlay.appendChild(conf);
+    conf.animate([
+      { top: '-20px', transform: `rotate(${Math.random()*360}deg)` },
+      { top: '110vh', transform: `rotate(${Math.random()*360 + 720}deg)` }
+    ], {
+      duration: 1800 + Math.random()*1200,
+      delay: Math.random()*600,
+      easing: 'ease-in',
+      fill: 'forwards'
+    });
+  }
+
+  // Add MEGA PARTY text
+  const partyText = document.createElement('div');
+  partyText.textContent = '🎉 MEGA PARTY! 🎉';
+  partyText.style.position = 'absolute';
+  partyText.style.top = '40%';
+  partyText.style.left = '50%';
+  partyText.style.transform = 'translate(-50%, -50%) scale(1)';
+  partyText.style.fontSize = '4vw';
+  partyText.style.fontWeight = 'bold';
+  partyText.style.color = '#fff';
+  partyText.style.textShadow = '0 0 20px #ff66cc, 0 0 40px #2196f3, 0 0 60px #fffd66';
+  partyText.style.zIndex = '10010';
+  partyText.style.pointerEvents = 'none';
+  overlay.appendChild(partyText);
+  partyText.animate([
+    { transform: 'translate(-50%, -50%) scale(0.7)', opacity: 0 },
+    { transform: 'translate(-50%, -50%) scale(1.2)', opacity: 1 },
+    { transform: 'translate(-50%, -50%) scale(1)', opacity: 1 }
+  ], {
+    duration: 1200,
+    fill: 'forwards'
+  });
+
+  // Remove overlay after 4.5 seconds
+  setTimeout(() => {
+    overlay.remove();
+  }, 4500);
 }
 
 // Event handlers and DOM event bindings
