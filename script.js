@@ -560,6 +560,7 @@ function loadFromUrl() {
   const params = new URLSearchParams(window.location.search);
   const puzzleStr = params.get('puzzle');
   const stateStr = params.get('state');
+  const pencilStr = params.get('pencil');
   if (puzzleStr && stateStr) {
     try {
       const puzzleDecompressed = LZString.decompressFromEncodedURIComponent(puzzleStr);
@@ -567,6 +568,12 @@ function loadFromUrl() {
       if (!puzzleDecompressed || !stateDecompressed) throw new Error('Invalid puzzle data');
       puzzle = JSON.parse(puzzleDecompressed);
       const state = JSON.parse(stateDecompressed);
+      if (pencilStr) {
+        const pencilDecompressed = LZString.decompressFromEncodedURIComponent(pencilStr);
+        if (pencilDecompressed) pencilMarks = JSON.parse(pencilDecompressed);
+      } else {
+        pencilMarks = Array.from({length:9},()=>Array.from({length:9},()=>[]));
+      }
       createBoard();
       // Fill user values
       const cells = document.querySelectorAll('.sudoku-cell');
@@ -577,10 +584,17 @@ function loadFromUrl() {
           cell.value = state[row][col] ? state[row][col] : '';
         }
       });
-      // Remove puzzle and state params from URL
+      // Update pencil marks
+      for (let row = 0; row < 9; row++) {
+        for (let col = 0; col < 9; col++) {
+          updatePencilMarks(row, col);
+        }
+      }
+      // Remove puzzle, state, and pencil params from URL
       const url = new URL(window.location);
       url.searchParams.delete('puzzle');
       url.searchParams.delete('state');
+      url.searchParams.delete('pencil');
       window.history.replaceState({}, '', url.pathname + url.search);
       return true;
     } catch (e) {
@@ -1009,11 +1023,12 @@ document.getElementById('pencil-mode-btn').addEventListener('click', function() 
   this.textContent = 'Pencil Mark Mode: ' + (pencilMode ? 'On' : 'Off');
 });
 document.getElementById('share-btn').addEventListener('click', function() {
-  // Encode puzzle and current state using LZString
+  // Encode puzzle, current state, and pencil marks using LZString
   const puzzleStr = LZString.compressToEncodedURIComponent(JSON.stringify(puzzle));
   const state = getBoardState();
   const stateStr = LZString.compressToEncodedURIComponent(JSON.stringify(state));
-  const url = `${location.origin}${location.pathname}?puzzle=${puzzleStr}&state=${stateStr}`;
+  const pencilStr = LZString.compressToEncodedURIComponent(JSON.stringify(pencilMarks));
+  const url = `${location.origin}${location.pathname}?puzzle=${puzzleStr}&state=${stateStr}&pencil=${pencilStr}`;
   // Copy to clipboard
   const shareMsg = document.getElementById('share-message');
   function showShareMsg(text, link) {
