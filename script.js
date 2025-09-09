@@ -11,7 +11,10 @@ let puzzle = [
   [0,0,0,0,8,0,0,7,9]
 ];
 let pencilMode = false;
-let pencilMarks = Array.from({length:9},()=>Array.from({length:9},()=>[]));
+let cornerPencilMode = false;
+let centerPencilMode = false;
+// pencilMarks now stores {corner:[], center:[]} for each cell
+let pencilMarks = Array.from({length:9},()=>Array.from({length:9},()=>({corner:[], center:[]})));
 let selectedHighlightNumber = null;
 let selectedNumber = null;
 let undoStack = [];
@@ -274,24 +277,17 @@ function createBoard() {
         input.value = '';
         input.tabIndex = 0;
       }
+      // Pencil marks: render both corner and center
       const pencilDiv = document.createElement('div');
       pencilDiv.className = 'pencil-marks';
-      pencilDiv.innerHTML = pencilMarks[row][col].map(n => `<span>${n}</span>`).join(' ');
+      // Corner marks (small, in corners)
+      pencilDiv.innerHTML =
+        `<div class='corner-pencil' style='position:absolute;left:2px;top:2px;font-size:9px;width:36px;text-align:left;line-height:1.1;'>${pencilMarks[row][col].corner.map(n => `<span>${n}</span>`).join(' ')}</div>` +
+        `<div class='center-pencil' style='position:absolute;left:0;top:14px;width:100%;text-align:center;font-size:13px;'>${pencilMarks[row][col].center.map(n => `<span>${n}</span>`).join(' ')}</div>`;
       container.appendChild(input);
       container.appendChild(pencilDiv);
       board.appendChild(container);
     }
-  }
-}
-function focusCell(row, col) {
-  if (row < 0 || row > 8 || col < 0 || col > 8) return;
-  const idx = row * 9 + col;
-  const board = document.getElementById('sudoku-board');
-  const container = board.children[idx];
-  if (!container) return;
-  const input = container.querySelector('.sudoku-cell');
-  if (input && !input.classList.contains('fixed')) {
-    input.focus();
   }
 }
 function updatePencilMarks(row, col) {
@@ -305,7 +301,9 @@ function updatePencilMarks(row, col) {
       pencilDiv.className = 'pencil-marks';
       container.appendChild(pencilDiv);
     }
-    pencilDiv.innerHTML = pencilMarks[row][col].map(n => `<span>${n}</span>`).join(' ');
+    pencilDiv.innerHTML =
+      `<div class='corner-pencil' style='position:absolute;left:2px;top:2px;font-size:9px;width:36px;text-align:left;line-height:1.1;'>${pencilMarks[row][col].corner.map(n => `<span>${n}</span>`).join(' ')}</div>` +
+      `<div class='center-pencil' style='position:absolute;left:0;top:14px;width:100%;text-align:center;font-size:13px;'>${pencilMarks[row][col].center.map(n => `<span>${n}</span>`).join(' ')}</div>`;
   }
 }
 function onInput(e) {
@@ -320,7 +318,7 @@ function onInput(e) {
     // Clear pencil marks for this cell
     const row = +e.target.dataset.row;
     const col = +e.target.dataset.col;
-    pencilMarks[row][col] = [];
+    pencilMarks[row][col] = {corner:[], center:[]};
     updatePencilMarks(row, col);
   }
 }
@@ -572,7 +570,7 @@ function loadFromUrl() {
         const pencilDecompressed = LZString.decompressFromEncodedURIComponent(pencilStr);
         if (pencilDecompressed) pencilMarks = JSON.parse(pencilDecompressed);
       } else {
-        pencilMarks = Array.from({length:9},()=>Array.from({length:9},()=>[]));
+        pencilMarks = Array.from({length:9},()=>Array.from({length:9},()=>({corner:[], center:[]})));
       }
       createBoard();
       // Fill user values
@@ -857,7 +855,7 @@ document.getElementById('sudoku-board').addEventListener('click', function(e) {
     if (selectedNumber === 0) {
       input.value = '';
       input.classList.remove('wrong');
-      pencilMarks[row][col] = [];
+      pencilMarks[row][col] = {corner:[], center:[]};
       updatePencilMarks(row, col);
       saveBoardState();
       selectedNumber = null;
@@ -865,13 +863,26 @@ document.getElementById('sudoku-board').addEventListener('click', function(e) {
       highlightSameNumbers();
       return;
     }
-    if (pencilMode) {
-      let idx = pencilMarks[row][col].indexOf(String(selectedNumber));
+    if (cornerPencilMode) {
+      let idx = pencilMarks[row][col].corner.indexOf(String(selectedNumber));
       if (idx === -1) {
-        pencilMarks[row][col].push(String(selectedNumber));
-        pencilMarks[row][col].sort();
+        pencilMarks[row][col].corner.push(String(selectedNumber));
+        pencilMarks[row][col].corner.sort();
       } else {
-        pencilMarks[row][col].splice(idx, 1);
+        pencilMarks[row][col].corner.splice(idx, 1);
+      }
+      updatePencilMarks(row, col);
+      saveBoardState();
+      selectedNumber = null;
+      renderNumberRow();
+      highlightSameNumbers();
+    } else if (centerPencilMode) {
+      let idx = pencilMarks[row][col].center.indexOf(String(selectedNumber));
+      if (idx === -1) {
+        pencilMarks[row][col].center.push(String(selectedNumber));
+        pencilMarks[row][col].center.sort();
+      } else {
+        pencilMarks[row][col].center.splice(idx, 1);
       }
       updatePencilMarks(row, col);
       saveBoardState();
@@ -880,7 +891,7 @@ document.getElementById('sudoku-board').addEventListener('click', function(e) {
       highlightSameNumbers();
     } else {
       input.value = selectedNumber;
-      pencilMarks[row][col] = [];
+      pencilMarks[row][col] = {corner:[], center:[]};
       updatePencilMarks(row, col);
       saveBoardState();
       input.dispatchEvent(new Event('input', {bubbles:true}));
@@ -897,20 +908,31 @@ document.getElementById('sudoku-board').addEventListener('keydown', function(e) 
     const col = +input.dataset.col;
     if (e.key >= '1' && e.key <= '9') {
       e.preventDefault();
-      if (pencilMode) {
-        let idx = pencilMarks[row][col].indexOf(e.key);
+      if (cornerPencilMode) {
+        let idx = pencilMarks[row][col].corner.indexOf(e.key);
         if (idx === -1) {
-          pencilMarks[row][col].push(e.key);
-          pencilMarks[row][col].sort();
+          pencilMarks[row][col].corner.push(e.key);
+          pencilMarks[row][col].corner.sort();
         } else {
-          pencilMarks[row][col].splice(idx, 1);
+          pencilMarks[row][col].corner.splice(idx, 1);
+        }
+        updatePencilMarks(row, col);
+        saveBoardState();
+        input.dispatchEvent(new Event('input', {bubbles:true}));
+      } else if (centerPencilMode) {
+        let idx = pencilMarks[row][col].center.indexOf(e.key);
+        if (idx === -1) {
+          pencilMarks[row][col].center.push(e.key);
+          pencilMarks[row][col].center.sort();
+        } else {
+          pencilMarks[row][col].center.splice(idx, 1);
         }
         updatePencilMarks(row, col);
         saveBoardState();
         input.dispatchEvent(new Event('input', {bubbles:true}));
       } else {
         input.value = e.key;
-        pencilMarks[row][col] = [];
+        pencilMarks[row][col] = {corner:[], center:[]};
         updatePencilMarks(row, col);
         saveBoardState();
         input.dispatchEvent(new Event('input', {bubbles:true}));
@@ -1005,7 +1027,7 @@ document.getElementById('clear-btn').addEventListener('click', () => {
       cell.value = '';
       const row = +cell.dataset.row;
       const col = +cell.dataset.col;
-      pencilMarks[row][col] = [];
+      pencilMarks[row][col] = {corner:[], center:[]};
       updatePencilMarks(row, col);
     }
   });
@@ -1015,12 +1037,24 @@ document.getElementById('clear-btn').addEventListener('click', () => {
 document.getElementById('new-puzzle-btn').addEventListener('click', () => {
   const difficulty = document.getElementById('difficulty').value;
   setPuzzle(generatePuzzle(difficulty));
-  pencilMarks = Array.from({length:9},()=>Array.from({length:9},()=>[]));
+  pencilMarks = Array.from({length:9},()=>Array.from({length:9},()=>({corner:[], center:[]})));
   saveBoardState();
 });
-document.getElementById('pencil-mode-btn').addEventListener('click', function() {
-  pencilMode = !pencilMode;
-  this.textContent = 'Pencil Mark Mode: ' + (pencilMode ? 'On' : 'Off');
+document.getElementById('corner-pencil-btn').addEventListener('click', function() {
+  cornerPencilMode = !cornerPencilMode;
+  this.textContent = 'Corner Pencil: ' + (cornerPencilMode ? 'On' : 'Off');
+  if (cornerPencilMode) {
+    centerPencilMode = false;
+    document.getElementById('center-pencil-btn').textContent = 'Center Pencil: Off';
+  }
+});
+document.getElementById('center-pencil-btn').addEventListener('click', function() {
+  centerPencilMode = !centerPencilMode;
+  this.textContent = 'Center Pencil: ' + (centerPencilMode ? 'On' : 'Off');
+  if (centerPencilMode) {
+    cornerPencilMode = false;
+    document.getElementById('corner-pencil-btn').textContent = 'Corner Pencil: Off';
+  }
 });
 document.getElementById('share-btn').addEventListener('click', function() {
   // Encode puzzle, current state, and pencil marks using LZString
@@ -1054,7 +1088,7 @@ window.onload = function() {
   renderNumberRow();
   renderUndoRedoRow();
   if (!loadFromUrl() && !loadBoardState()) {
-    pencilMarks = Array.from({length:9},()=>Array.from({length:9},()=>[]));
+    pencilMarks = Array.from({length:9},()=>Array.from({length:9},()=>({corner:[], center:[]})));
     createBoard();
   }
   patchUserActionUndo();
